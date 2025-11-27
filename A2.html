@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adventure Time Series: Playful SVG Transformations</title>
+
+<style>
+  :root{--line:#e6e6e6;--shadow:0 6px 18px rgba(20,30,55,.08);}
+  html,body{background:#fff;margin:0;font-family:system-ui,Arial,sans-serif;}
+  .wrap{max-width:1200px;margin:auto;padding:28px 18px 40px;}
+  h1{margin:0 0 12px;font-size:clamp(20px,2.5vw,28px);color:#111;}
+
+  table{width:100%;min-width:900px;border-collapse:collapse;background:#fff;}
+  th,td{border:1px solid var(--line);padding:12px 10px;text-align:center;font-size:14px;color:#222;}
+  th{font-weight:700;background:#fff;}
+  tbody tr:hover td{background:#fafafa;}
+
+  .cell{width:120px;height:120px;margin:auto;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(20,30,55,.05);transition:box-shadow .2s ease,transform .2s ease;}
+  .cell:hover{box-shadow:var(--shadow);}
+  .cell svg{width:100%;height:100%}
+
+  .mirror  .cell{transform:scaleX(-1);transform-origin:center;transform-box:fill-box;}
+  .rot180  .cell{transform:rotate(180deg);transform-origin:center;transform-box:fill-box;}
+  .squash  .cell{transform:scaleY(0.5);transform-origin:center;transform-box:fill-box;}
+  .gray    .cell{filter:grayscale(100%);}
+
+  #modal{position:fixed;inset:0;background:#fff;display:none;z-index:999;}
+  #modal.show{display:flex;}
+  .modal-box{margin:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(92vw,780px);max-height:88vh;display:flex;flex-direction:column;}
+  .modal-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);}
+  .modal-title{font-weight:700;color:#222;font-size:15px}
+  .close{border:0;background:#fff;border-radius:10px;width:36px;height:36px;cursor:pointer;font-size:20px;line-height:1;}
+  .close:hover{background:#f2f2f2}
+  .modal-bd{padding:16px;display:flex;align-items:center;justify-content:center;}
+  .modal-bd .zoom{width:min(80vw,640px);height:min(70vh,640px);}
+  .modal-bd .zoom svg{width:100%;height:100%}
+  @media (prefers-reduced-motion:reduce){.cell{transition:none}}
+</style>
+
+<body>
+  <div class="wrap">
+    <h1>Adventure Time Series: Playful SVG Transformations</h1>
+
+    <table id="tbl" aria-label="10x5 SVG effects table">
+      <thead>
+        <tr>
+          <th>Original</th>
+          <th>Mirrored</th>
+          <th>Rotated 180°</th>
+          <th>Vertically 50%</th>
+          <th>Grayscale</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+    <div class="modal-box">
+      <div class="modal-hd">
+        <div id="mtitle" class="modal-title"></div>
+        <button class="close" aria-label="Close" id="mclose">×</button>
+      </div>
+      <div class="modal-bd">
+        <div class="zoom" id="mcontent"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const s1 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M18 70 q14 8 42 8 t42-8 v-8 q0-10-10-18 q-6-24-32-26 q-22 2-30 18 q-14 8-12 24Z" fill="#ffa1b0" stroke="#e07484" stroke-width="3"/>
+  <circle cx="66" cy="40" r="10" fill="#7dd3fc" stroke="#184e77" stroke-width="3"/>
+  <path d="M62 52 h16" stroke="#e07484" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+const s2 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M60 20 q10 0 14 8 q10 0 12 10 q10 6 4 16 q2 10-8 14 q-8 8-22 6 q-14 2-22-6 q-10-4-8-14 q-6-10 4-16 q2-10 12-10 q4-8 14-8Z" fill="#b682ff" stroke="#6b4bb3" stroke-width="3"/>
+  <path d="M60 26 l3 6 h6 l-5 4 l2 6 l-6-4 l-6 4 l2-6 l-5-4 h6z" fill="#facc15"/>
+  <circle cx="54" cy="56" r="2.2"/><circle cx="68" cy="56" r="2.2"/>
+  <path d="M55 62 q5 3 10 0" stroke="#333" stroke-width="2" fill="none"/>
+</svg>`;
+const s3 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="56" cy="56" rx="24" ry="28" fill="#47c3a8" stroke="#167a67" stroke-width="3"/>
+  <path d="M52 56 q-10 4 -14 0" stroke="#167a67" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M74 56 l14-8 l4 8 l4-10 l4 10 l4-8 l10 8z" fill="#ffd54f" stroke="#8d6c00" stroke-width="3"/>
+</svg>`;
+const s4 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <g stroke="#184e77" stroke-width="3">
+    <path d="M36 30 h48 a10 10 0 0 1 10 10 v16 a10 10 0 0 1-10 10 H36 a10 10 0 0 1-10-10 V40 a10 10 0 0 1 10-10Z" fill="#fff"/>
+    <circle cx="60" cy="50" r="14" fill="#fde5cc"/>
+    <rect x="34" y="64" width="52" height="16" rx="6" fill="#49a6e9"/>
+    <path d="M36 64 q-10 0 -12 10 q10 8 20 4" fill="#72d07f" stroke="#1b7a43"/>
+    <path d="M84 64 q10 0 12 10 q-10 8 -20 4" fill="#72d07f" stroke="#1b7a43"/>
+  </g>
+</svg>`;
+const s5 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <g stroke="#7a5d00" stroke-width="3">
+    <ellipse cx="60" cy="56" rx="34" ry="26" fill="#f5b841"/>
+    <circle cx="50" cy="52" r="8" fill="#fff"/><circle cx="70" cy="52" r="8" fill="#fff"/>
+    <circle cx="50" cy="52" r="3"/><circle cx="70" cy="52" r="3"/>
+    <path d="M58 60 q4 4 8 0 q-4 -4 -8 0Z" fill="#7a5d00"/>
+  </g>
+</svg>`;
+const s6 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="54" r="26" fill="#fff" stroke="#c81e1e" stroke-width="3"/>
+  <g fill="#c81e1e">
+    <path d="M60 28 v10"/><path d="M83 35 l-8 6"/><path d="M92 54 h-10"/>
+    <path d="M83 73 l-8 -6"/><path d="M60 80 v-10"/><path d="M37 73 l8 -6"/>
+    <path d="M28 54 h10"/><path d="M37 35 l8 6"/>
+  </g>
+  <path d="M56 78 l4 4 l4-4 l4 4 l-8 6 l-8-6 z" fill="#c81e1e"/>
+</svg>`;
+const s7 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M36 66 q-6-20 14-22 q8-14 26-8 q14-6 22 8 q18 0 16 18 q0 16-18 16 H52 q-16 0-16-12Z" fill="#e6f3ff" stroke="#2b6c91" stroke-width="3"/>
+  <path d="M64 40 l8 -12 l8 12 l8 -12 l8 16" fill="#ffd54f" stroke="#8d6c00" stroke-width="3"/>
+  <path d="M68 56 l10 0 l-6 16 z" fill="#1e3a8a"/>
+</svg>`;
+const s8 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M30 66 q6-24 30-26 q24 2 32 26 q-6 12-32 12 q-26 0-30-12Z" fill="#ffc1dc" stroke="#cc6699" stroke-width="3"/>
+  <circle cx="60" cy="58" r="10" fill="#fff0f6" stroke="#cc6699" stroke-width="2"/>
+  <path d="M52 40 h16 l4 8 h-24z" fill="#f9a8d4"/>
+  <path d="M56 36 h8 l2 6 h-12z" fill="#ffd54f" stroke="#8d6c00" stroke-width="2"/>
+</svg>`;
+const s9 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M84 70 q-8 10-24 10 q-20 0-28-12 q-8-12 6-22 q18-12 34-6 q18 8 12 30Z" fill="#201a2a"/>
+  <path d="M64 74 q-16 4-28-6 q-8-8 0-16 q10-8 24-6 q20 4 18 16 q-2 8-14 12Z" fill="#fff" stroke="#6b7280" stroke-width="2"/>
+  <circle cx="70" cy="60" r="2"/><circle cx="54" cy="62" r="2"/>
+  <path d="M60 66 h8" stroke="#333" stroke-width="2"/>
+  <path d="M64 70 v4 M68 70 v4" stroke="#333" stroke-width="2"/>
+  <circle cx="92" cy="66" r="1.8" fill="#e11d48"/><circle cx="96" cy="68" r="1.8" fill="#e11d48"/>
+</svg>`;
+const s10 = `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M30 64 q-6-14 8-24 q20-16 44-4 q20 8 8 24 q-12 18-34 18 q-18 0-26-14Z" fill="#f5b841" stroke="#7a5d00" stroke-width="3"/>
+  <circle cx="62" cy="56" r="8" fill="#fff"/><circle cx="78" cy="48" r="8" fill="#fff"/>
+  <circle cx="62" cy="56" r="3"/><circle cx="78" cy="48" r="3"/>
+  <path d="M68 62 q4 4 8 0 q-4 -4 -8 0Z" fill="#7a5d00"/>
+</svg>`;
+
+const svgs = [s1,s2,s3,s4,s5,s6,s7,s8,s9,s10];
+const tbody = document.querySelector('#tbl tbody');
+const headers = [...document.querySelectorAll('#tbl thead th')].map(th => th.textContent.trim());
+const cell = (svg, cls='') => `<td class="${cls}"><div class="cell" title="${cls||'Original'}">${svg}</div></td>`;
+
+svgs.forEach(svg => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = cell(svg) + cell(svg,'mirror') + cell(svg,'rot180') + cell(svg,'squash') + cell(svg,'gray');
+  tbody.appendChild(tr);
+});
+
+const modal = document.getElementById('modal');
+const mcontent = document.getElementById('mcontent');
+const mtitle = document.getElementById('mtitle');
+const closeBtn = document.getElementById('mclose');
+
+document.querySelectorAll('#tbl tbody td .cell').forEach(div=>{
+  div.addEventListener('click', ()=>{
+    const col = div.closest('td').cellIndex;
+    mtitle.textContent = headers[col] || '';
+    mcontent.innerHTML = `<div class="zoom">${div.innerHTML}</div>`;
+    modal.classList.add('show');
+  });
+});
+
+function closeModal(){ modal.classList.remove('show'); mcontent.innerHTML=''; }
+closeBtn.addEventListener('click', closeModal);
+window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Singapore PSI Realtime Data</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    /* ---------- Base Style ---------- */
+    body {
+      font-family: "Poppins", "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #e0f7fa, #e8eaf6);
+      margin: 0;
+      padding: 0;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      text-align: center;
+      padding: 60px 20px 20px;
+      animation: fadeIn 1.2s ease-out;
+    }
+
+    h1 {
+      color: #1a237e;
+      font-size: 2.4em;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    p.subtitle {
+      color: #455a64;
+      font-size: 1em;
+      margin: 0;
+    }
+
+    /* ---------- Table ---------- */
+    table {
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      border-radius: 14px;
+      overflow: hidden;
+      animation: slideUp 1s ease-out;
+    }
+
+    thead {
+      background: linear-gradient(90deg, #3949ab, #1e88e5);
+      color: white;
+    }
+
+    th, td {
+      border: none;
+      padding: 14px 10px;
+      text-align: center;
+      font-size: 0.95em;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f7f9fc;
+    }
+
+    tr:hover {
+      background-color: #e3f2fd;
+      transition: 0.3s;
+    }
+
+    /* ---------- Footer ---------- */
+    footer {
+      margin-top: auto;
+      padding: 30px 0;
+      text-align: center;
+      font-size: 0.85em;
+      color: #78909c;
+    }
+
+    a {
+      color: #1e88e5;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* ---------- Animations ---------- */
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(-10px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    @keyframes slideUp {
+      from {opacity: 0; transform: translateY(30px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 0.8em;
+        padding: 10px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Singapore PSI Realtime Data</h1>
+    <p class="subtitle">Live air quality readings from <a href="https://data.gov.sg" target="_blank">data.gov.sg</a></p>
+  </header>
+
+  <table id="psiTable">
+    <thead>
+      <tr>
+        <th>Reading Type</th>
+        <th>Central</th>
+        <th>West</th>
+        <th>East</th>
+        <th>North</th>
+        <th>South</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="6">Loading data...</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    © 2025 Created by [Your Name] · IDV Assignment 1
+  </footer>
+
+  <script>
+    async function getPSIData() {
+      try {
+        const response = await fetch('https://api.data.gov.sg/v1/environment/psi');
+        const data = await response.json();
+
+        const readings = data.items[0].readings;
+        const tbody = document.querySelector("#psiTable tbody");
+        tbody.innerHTML = "";
+
+        for (let key in readings) {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${key}</td>
+            <td>${readings[key].central ?? '-'}</td>
+            <td>${readings[key].west ?? '-'}</td>
+            <td>${readings[key].east ?? '-'}</td>
+            <td>${readings[key].north ?? '-'}</td>
+            <td>${readings[key].south ?? '-'}</td>
+          `;
+          tbody.appendChild(row);
+        }
+      } catch (error) {
+        console.error("Error fetching PSI data:", error);
+        document.querySelector("#psiTable tbody").innerHTML = "<tr><td colspan='6'>Failed to load data.</td></tr>";
+      }
+    }
+
+    getPSIData();
+  </script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adversarial Robustness — Heatmap (D3.js)</title>
+<style>
+  html,body{margin:0;font-family:system-ui,Segoe UI,Arial}
+  .wrap{max-width:1080px;margin:24px auto;padding:0 16px}
+  h1{margin:12px 0 6px}
+  .sub{color:#555;margin:0 0 12px}
+  .bar{display:flex;gap:8px;margin:8px 0 14px}
+  .bar button{padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#111;color:#fff;cursor:pointer}
+  .bar button:hover{filter:brightness(1.05)}
+  /* 允许在小屏横向滚动查看整张图 */
+  .chart-scroller{overflow-x:auto}
+  #viz{min-width:980px;display:block}
+  .axis text{font-size:12px}
+  .cell{stroke:#fff;stroke-width:1}
+  .axis .col-label{cursor:pointer;user-select:none}
+  .axis .col-label:hover{fill:#111;font-weight:600}
+  .axis .col-label:focus{outline:2px solid #111; outline-offset:2px}
+  .rowHL rect{opacity:.85}
+  .colHL{font-weight:700;text-decoration:underline}
+  .tooltip{
+    position:fixed;pointer-events:none;background:#111;color:#fff;
+    padding:8px 10px;border-radius:10px;font-size:12px;line-height:1.25;
+    transform:translate(-50%,-120%);opacity:0;transition:opacity .12s;
+    box-shadow:0 6px 18px rgba(0,0,0,.12)
+  }
+  .note{font-size:12px;color:#666;margin-top:6px}
+  /* 单元格常驻数值（无描边） */
+  .val{pointer-events:none;font-weight:600;font-size:11px}
+
+  /* 小屏优化 */
+  @media (max-width:640px){
+    .val{font-size:10px}
+    .axis text{font-size:10px}
+    .bar button{padding:6px 10px}
+  }
+</style>
+
+<body>
+<div class="wrap">
+  <h1>Adversarial Robustness — Heatmap</h1>
+  <p class="sub">Click a column header to sort by that defense. Hover a cell for values.</p>
+  <div class="bar">
+    <button id="sortAvg">Sort by Avg.</button>
+    <button id="reset">Reset</button>
+  </div>
+
+  <div class="chart-scroller">
+    <svg id="viz" viewBox="0 0 980 660" aria-label="robustness heatmap"></svg>
+  </div>
+
+  <div class="note">Values are percentages (0–100). Darker = higher accuracy.</div>
+</div>
+<div class="tooltip" id="tip"></div>
+
+<script id="robust-data" type="text/csv">
+Attack,ERM,DA,PGDT,TRADES,MART,RS,IBP,PRL,TandT
+No Attack,94.85,94.21,84.38,80.42,81.54,89.45,48.40,93.82,94.23
+TIFGSM,35.10,33.00,65.70,62.90,69.10,45.40,40.20,34.00,92.80
+MIFGSM,0.00,0.00,50.90,51.90,50.50,5.80,38.10,0.00,92.80
+DIFGSM,1.00,0.00,51.75,50.50,53.60,4.10,38.10,3.10,92.80
+VMIFGSM,0.00,0.00,51.10,50.90,51.90,4.10,38.10,0.00,93.90
+TPGD,38.10,39.20,69.30,69.10,70.10,48.50,50.00,28.90,91.80
+FGSM,29.90,25.80,57.95,54.60,61.90,28.90,38.10,25.80,93.80
+RFGSM,0.00,0.00,49.15,50.40,48.50,3.70,38.10,0.00,90.00
+BIM,0.00,0.00,52.00,57.20,47.40,2.10,38.10,0.00,90.70
+FAB,1.00,2.10,43.00,46.40,40.20,5.30,38.10,4.10,90.10
+CW,0.00,0.00,32.20,35.10,29.90,1.00,40.20,1.00,92.90
+UPGD,0.00,0.00,49.85,50.50,49.80,5.10,38.10,0.00,93.80
+FFGSM,19.60,23.70,60.55,55.70,66.00,33.00,42.30,29.90,92.80
+Jitter,11.30,12.40,48.15,47.40,49.50,34.00,39.20,24.70,90.70
+PGD,0.00,0.00,57.40,54.60,60.80,7.20,40.20,0.00,91.80
+EOTPGD,0.00,0.00,50.10,50.30,50.50,3.00,38.10,0.00,90.70
+APGD,0.00,0.00,48.40,51.00,46.40,1.00,38.10,0.00,90.70
+NIFGSM,0.00,0.00,57.95,56.70,59.80,7.20,38.10,1.00,92.80
+SiniFGSM,4.10,1.00,59.00,56.70,61.90,23.70,38.10,12.40,93.70
+VNIFGSM,0.00,0.00,50.45,53.00,48.50,5.10,38.10,0.00,92.90
+APGDT,0.00,0.00,40.90,44.30,38.10,0.00,38.10,0.00,88.70
+Square,0.00,1.00,50.40,54.00,47.40,3.10,38.10,2.10,88.08
+Add Gaussian Noise,25.80,43.30,79.10,78.40,80.40,74.20,42.30,45.40,87.60
+OnePixel,79.40,83.50,78.05,74.20,82.50,83.50,42.50,80.40,89.70
+Pixle,0.00,0.00,12.55,11.30,14.40,1.00,10.30,0.00,17.50
+PGDL2,1.00,0.00,35.80,36.10,36.10,5.20,36.10,0.00,92.90
+</script>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const defenses = ["ERM","DA","PGDT","TRADES","MART","RS","IBP","PRL","TandT"];
+const csv = document.getElementById('robust-data').textContent.trim();
+const rows = d3.csvParse(csv, d3.autoType);
+
+const svg = d3.select("#viz");
+const W = 980, H = 660;
+const M = {t:80, r:140, b:24, l:180};
+const w = W - M.l - M.r, h = H - M.t - M.b;
+const g = svg.append("g").attr("transform",`translate(${M.l},${M.t})`);
+
+const y = d3.scaleBand().domain(d3.range(rows.length)).range([0,h]).padding(0.05);
+const x = d3.scaleBand().domain(defenses).range([0,w]).padding(0.05);
+
+// 颜色比例（分位数分段，视觉均衡）
+const allVals = rows.flatMap(r => defenses.map(k => r[k]));
+const sorted = allVals.slice().sort(d3.ascending);
+const blues = ['#f7fbff','#e6eff9','#d5e3f3','#c2d6ee','#a9c4e6','#8fb2de','#739dd3','#5c87c7','#3f6db9','#2e57a4','#23478f'];
+const domainStops = d3.range(blues.length).map(i => d3.quantile(sorted, i/(blues.length-1)));
+const c = d3.scaleLinear().domain(domainStops).range(blues).clamp(true);
+
+// —— 右侧竖直图例（legend）
+const vmin = d3.min(allVals), vmax = d3.max(allVals);
+const legendH = 280, legendW = 16;
+const legendScale = d3.scaleLinear().domain([vmin, vmax]).range([legendH, 0]);
+
+const defs = svg.append("defs");
+const grad = defs.append("linearGradient")
+  .attr("id","legend-grad").attr("x1","0").attr("x2","0").attr("y1","1").attr("y2","0");
+d3.range(0,101).forEach(t=>{
+  const p = t/100;
+  grad.append("stop")
+    .attr("offset", (p*100)+"%")
+    .attr("stop-color", c(vmin + p*(vmax-vmin)));
+});
+const lg = g.append("g").attr("transform", `translate(${w+30},${(h-legendH)/2})`);
+lg.append("rect").attr("width", legendW).attr("height", legendH)
+  .attr("rx",3).style("fill","url(#legend-grad)");
+lg.append("g").attr("transform",`translate(${legendW+6},0)`)
+  .call(d3.axisRight(legendScale).ticks(6).tickFormat(d=>d.toFixed(0)));
+lg.append("text").attr("x", -2).attr("y", -8).style("font-size","11px").text("Accuracy (%)");
+
+// Tooltip
+const tip = d3.select("#tip");
+
+// Rows and cells
+const rowG = g.selectAll(".row").data(rows).join("g")
+  .attr("class","row")
+  .attr("transform",(d,i)=>`translate(0,${y(i)})`);
+
+rowG.each(function(row){
+  d3.select(this).selectAll("rect.cell")
+    .data(defenses.map(k => ({def:k, val: row[k], atk: row.Attack})))
+    .join("rect")
+    .attr("class","cell")
+    .attr("x", d => x(d.def))
+    .attr("y", 0)
+    .attr("width", x.bandwidth())
+    .attr("height", y.bandwidth())
+    .attr("fill", d => c(d.val))
+    .on("mouseenter", function(e,d){
+      rowG.classed("rowHL", r => r.Attack === d.atk);
+      d3.selectAll(".col-label").classed("colHL", l => l === d.def);
+      tip.html(`<div><b>${d.atk}</b></div><div>${d.def}: ${d.val.toFixed(2)}%</div>`)
+         .style("left",(e.clientX)+"px").style("top",(e.clientY)+"px").style("opacity",1);
+    })
+    .on("mousemove", e => tip.style("left",(e.clientX)+"px").style("top",(e.clientY)+"px"))
+    .on("mouseleave", ()=>{ rowG.classed("rowHL", false); d3.selectAll(".col-label").classed("colHL", false); tip.style("opacity",0); });
+
+  // 常驻数字（两位小数）
+  d3.select(this).selectAll("text.val")
+    .data(defenses.map(k => ({def:k, val: row[k]})))
+    .join("text")
+    .attr("class","val")
+    .attr("x", d => x(d.def) + x.bandwidth()/2)
+    .attr("y", y.bandwidth()/2 + 4)
+    .attr("text-anchor","middle")
+    .text(d => Number.isFinite(d.val) ? d.val.toFixed(2) : "")
+    .attr("fill", d => {
+      const rgb = d3.color(c(d.val)).rgb();
+      const L = (0.2126*rgb.r + 0.7152*rgb.g + 0.0722*rgb.b)/255;
+      return L < 0.55 ? "#fff" : "#111";
+    });
+});
+
+// Y axis
+const yAxis = g.append("g").attr("class","axis")
+  .call(d3.axisLeft(y).tickFormat(i => rows[i].Attack));
+yAxis.selectAll("text").style("font-size","12px");
+
+// Column labels (click + keyboard)
+const header = g.append("g").attr("class","axis").attr("transform",`translate(0,${-8})`);
+header.selectAll("text").data(defenses).join("text")
+  .attr("class","col-label")
+  .attr("x", d => x(d) + x.bandwidth()/2)
+  .attr("y", -12)
+  .attr("text-anchor","middle")
+  .attr("role","button")
+  .attr("tabindex", 0)
+  .attr("aria-label", d => `Sort by ${d}`)
+  .text(d => d)
+  .on("click", (_,col) => sortBy(col))
+  .on("keydown", (e,col) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sortBy(col); }
+  });
+
+// Axes titles
+g.append("text").attr("x", -M.l + 10).attr("y", -44).text("Attack (rows)").style("font-size","12px");
+g.append("text").attr("x", w - 4).attr("y", -44).attr("text-anchor","end").text("Defense (columns)").style("font-size","12px");
+
+// Intro fade-in
+g.selectAll("rect.cell").attr("opacity",0).transition().duration(900).attr("opacity",1);
+
+// Sorting helpers
+function reorder(idxOrder){
+  y.domain(idxOrder);
+  rowG.transition().duration(650).attr("transform",(d,i)=>`translate(0,${y(idxOrder.indexOf(i))})`);
+  yAxis.transition().duration(650).call(d3.axisLeft(y).tickFormat(i => rows[i].Attack));
+}
+function sortBy(col){
+  const order = d3.range(rows.length).sort((a,b)=>d3.descending(rows[a][col], rows[b][col]));
+  reorder(order);
+}
+
+// Buttons
+document.getElementById('sortAvg').onclick = () => {
+  const order = d3.range(rows.length).sort((a,b)=>{
+    const av = d3.mean(defenses.map(k=>rows[a][k]));
+    const bv = d3.mean(defenses.map(k=>rows[b][k]));
+    return d3.descending(av,bv);
+  });
+  reorder(order);
+};
+document.getElementById('reset').onclick = () => reorder(d3.range(rows.length));
+</script>
+</body>
+</html>

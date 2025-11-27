@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>All Charts — Combined Page (with Notes)</title>
+
+<style>
+  html,body{margin:0;background:#fff;font-family:system-ui,Segoe UI,Arial}
+  .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+  h2{margin:22px 0 6px;font-size:24px}
+  .sub{color:#666;margin:0 0 12px}
+  section{border-top:1px solid #eee;padding-top:18px;margin-top:10px}
+
+  /* layout: chart + note side by side */
+  .chart-row{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+  @media (max-width:900px){ .chart-row{grid-template-columns:1fr} }
+
+  /* shared svg & axes */
+  svg{width:100%;height:auto;display:block;background:#fff}
+  .axis path,.axis line{stroke:#111;stroke-width:1}
+  .grid .tick line{stroke:#e5e7eb}
+
+  /* sticky note */
+  .note{background:#fffbe6;border:1px solid #f3d08b;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+  .note header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px dashed #f0c971}
+  .note header b{font-size:14px}
+  .note small{color:#8a6d3b}
+  .note textarea{width:100%;min-height:160px;border:0;outline:none;background:transparent;padding:10px 12px 12px 12px;resize:vertical;font-size:14px;line-height:1.45}
+  .note-msg{font-size:12px;color:#64748b;margin:6px 12px 12px}
+
+  /* chart 4 specific */
+  .series-area{fill-opacity:.55;stroke-width:1.2}
+  .series-area.dim{opacity:.25}
+  .legend{font-size:13px}
+  .legend rect{stroke:#444;stroke-width:.6}
+  .swatch{display:inline-block;width:.7em;height:.7em;border-radius:2px;margin-right:.4em}
+  .guide{stroke:#94a3b8;stroke-dasharray:4 6;stroke-width:1.2}
+
+  /* tooltip (for charts 4, 8 & 11) */
+  .tooltip{
+    position:fixed;pointer-events:none;background:#111;color:#fff;
+    padding:8px 10px;border-radius:10px;font-size:12px;line-height:1.25;
+    transform:translate(-50%,-120%);opacity:0;transition:opacity .12s;
+    box-shadow:0 6px 18px rgba(0,0,0,.12)
+  }
+
+  /* chart 9 (sketch) */
+  :root{ --ink:#2b2f77; }
+  #stage9{border:1px solid #e5e7eb;border-radius:12px;padding:12px;overflow:hidden;min-height:120px}
+  svg *{vector-effect:non-scaling-stroke; pointer-events:auto}
+  @keyframes fadeInUp{from{opacity:0; transform: translateY(8px)} to{opacity:1; transform: translateY(0)}}
+  .enter{ animation: fadeInUp .8s ease-out both }
+  @keyframes sway { 0%{transform:rotate(calc(-1*var(--amp,3deg)))} 50%{transform:rotate(var(--amp,3deg))} 100%{transform:rotate(calc(-1*var(--amp,3deg)))} }
+  .sway{ transform-box:fill-box; transform-origin:center; animation:sway var(--dur,3s) ease-in-out infinite; will-change:transform; }
+  .sway:hover{ --amp:6deg; --dur:1.2s; stroke:#3b82f6 !important; stroke-width:2.2 !important; cursor:pointer; }
+  .hand-wave{ --amp:6deg; transform-box:fill-box; transform-origin:top center; animation:sway .7s ease-in-out 2; }
+  .tools{display:flex;gap:8px;margin-top:10px}
+  .tools button{padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#111;color:#fff;font-size:14px;cursor:pointer}
+  .tools button:hover{filter:brightness(1.05)}
+
+  /* chart 8 (bars) */
+  .frame{ fill:none; stroke:#444; stroke-width:3; }
+  .bar{ fill:#f1cd74; stroke:#caa44a; stroke-width:1.5; }
+  .ghost{ fill:none; stroke:#caa44a; stroke-dasharray:6 6; stroke-width:2; }
+  .value{ font: 600 14px/1 Georgia, 'Times New Roman', serif; fill:#2a2a2a; pointer-events:none; }
+  .x .tick text{ font: 600 16px Georgia, 'Times New Roman', serif; }
+  .title{ font: 700 26px Georgia, 'Times New Roman', serif; }
+  .ctrl{ display:flex; align-items:center; gap:12px; margin-top:10px; color:#333; }
+  .toggle{ appearance: none; width:14px; height:14px; border:1px solid #999; border-radius:3px; vertical-align:-2px; margin-right:6px; }
+  .toggle:checked{ background:#111; box-shadow: inset 0 0 0 2px #fff; }
+
+  /* chart 10 (map) */
+  .land{fill:#f4dfb3;stroke:#b45309;stroke-width:1.2}
+  .ring{fill:none;stroke:#9d174d;stroke-width:5}
+  .pt{fill:#0ea5e9;stroke:#0b4a6f;stroke-width:1.2}
+  .label{font-size:16px;fill:#0b4a6f;pointer-events:none}
+  .label-halo{paint-order:stroke fill; stroke:#fff; stroke-width:3;}
+
+  /* chart 11 (function) — curves only strokes */
+  .curve{ fill:none; stroke-width:3; }
+  .shade{ fill:#9ca3af; fill-opacity:.45; }
+  .vline{ stroke:#111; stroke-dasharray:6 6; stroke-width:2; }
+  .handle{ fill:#111; }
+</style>
+
+<body>
+  <div class="wrap">
+
+    <!-- Chart 4 -->
+    <section id="sec4">
+      <h2>Chart 4 (frequency)</h2>
+      <p class="sub">Values are approximate. Includes one transition and one interaction.</p>
+
+      <div class="chart-row">
+        <svg id="chart4" viewBox="0 0 920 240" aria-label="frequency area chart"></svg>
+
+        <!-- sticky note -->
+        <div class="note">
+          <header><b>Notes — Chart 4</b><small id="s4"></small></header>
+          <textarea id="n4" data-key="note4" data-default="At the beginning, I sent the assignment requirements and the reference images to GPT and asked it to generate the corresponding HTML. However, it kept failing to reproduce the numerical peak values correctly, so I searched the HTML for the places where those values could be edited, found them, and debugged/modified them myself. After five or six rounds of changes, I produced a figure that closely matches the reference."></textarea>
+        </div>
+      </div>
+
+      <div class="tooltip" id="tip4"></div>
+    </section>
+
+    <!-- Chart 9 -->
+    <section id="sec9">
+      <h2>Chart 9 (sketch) — interactive</h2>
+      <p class="sub">Fade-in entrance; head/face gentle sway; click the hand to wave ×2.</p>
+
+      <div class="chart-row">
+        <div>
+          <div id="stage9" class="enter"></div>
+          <div class="tools">
+            <button id="replay9">Replay fade-in</button>
+            <button id="toggle9">Pause/Play head & face</button>
+            <button id="wave9">Wave hand ×2</button>
+          </div>
+        </div>
+
+        <!-- sticky note -->
+        <div class="note">
+          <header><b>Notes — Chart 9</b><small id="s9"></small></header>
+          <textarea id="n9" data-key="note9" data-default="Before creating this figure, I asked GPT what the fastest approach would be. It gave me three options, and I chose to draw the SVG myself in Illustrator and then send it to GPT to add the fade-in and interactive effects. During the process, the interactions failed because the SVG wasn’t grouped, so I regrouped the elements. After four or five more rounds of tweaking the interactions with GPT, I completed the figure."></textarea>
+          <!-- extra tip below the sticky note -->
+          <div class="note-msg">If opening this page shows no figure for Chart 9 on first load, please refresh once.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chart 8 -->
+    <section id="sec8">
+      <h2>Chart 8 (simple bars)</h2>
+      <p class="sub">Replicated with D3.js — includes one transition and one interaction.</p>
+
+      <div class="chart-row">
+        <svg id="chart8" viewBox="0 0 920 420" aria-label="Cross Validation Accuracy chart"></svg>
+
+        <!-- sticky note -->
+        <div class="note">
+          <header><b>Notes — Chart 8</b><small id="s8"></small></header>
+          <textarea id="n8" data-key="note8" data-default="This was the easiest figure for me: after I sent GPT the assignment requirements and the reference image, it generated exactly what I needed on the first try."></textarea>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <label><input id="toggleGhost8" class="toggle" type="checkbox" checked>Show Baseline (dashed)</label>
+        <span style="color:#666">Values are approximate.</span>
+      </div>
+      <div class="tooltip" id="tip8"></div>
+    </section>
+
+    <!-- Chart 11 -->
+    <section id="sec11">
+      <h2>Chart 11 (function)</h2>
+      <p class="sub">Peaks scaled to 0.22 (yellow) and 0.25 (teal). Drag the dashed lines to adjust the ambiguous region.</p>
+
+      <div class="chart-row">
+        <svg id="chart11" viewBox="0 0 900 520" aria-label="pdf chart"></svg>
+
+        <!-- sticky note -->
+        <div class="note">
+          <header><b>Notes — Chart 11</b><small id="s11"></small></header>
+          <textarea id="n11" data-key="note11" data-default="For this figure, after I sent it to GPT and got the first output, the same issue as before appeared—the function’s peak value didn’t match what I needed. Even though I highlighted exactly which values were wrong, it still didn’t fix them. So I asked GPT why the peak was incorrect in the code; this time it corrected the mistake and explained how to resolve it. After another three or four rounds of back-and-forth, we finally produced the figure."></textarea>
+        </div>
+      </div>
+
+      <div class="tooltip" id="tip11"></div>
+    </section>
+
+    <!-- Chart 10 -->
+    <section id="sec10">
+      <h2>Chart 10 (map)</h2>
+      <p class="sub">Loaded from your GeoJSON. Drag the red circle; use mouse wheel to change radius.</p>
+
+      <div class="chart-row">
+        <svg id="chart10" viewBox="0 0 820 640" aria-label="map"></svg>
+
+        <!-- sticky note -->
+        <div class="note">
+          <header><b>Notes — Chart 10</b><small id="s10"></small></header>
+          <textarea id="n10" data-key="note10" data-default="For this figure, after GPT produced the first version, it told me a map was needed. I asked GPT where to download the required file, then followed the link to download a map of Singapore and sent it to GPT. In the next output, I noticed the “x” symbol was missing, so I specified that I needed an “x” at the center of the circle. This time, it met my requirement well."></textarea>
+          <div class="note-msg">Put <code>MasterPlan2019PlanningAreaBoundaryNoSea.geojson</code> and <code>11.svg</code> in the SAME folder as this HTML.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- D3 once -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <script>
+  /* ========== Notes (status + default load; buttons removed) ========== */
+  (function initNotes(){
+    const $ = sel => document.querySelector(sel);
+    function setup(id){
+      const ta = $('#'+id), status = $('#s'+id.slice(1));
+      const key = 'IDV_notes_'+ta.dataset.key;
+      const def = ta.dataset.default || '';
+      const saved = localStorage.getItem(key);
+      ta.value = saved ?? def;
+      status.textContent = saved ? 'Loaded (local)' : 'Loaded (default)';
+      ta.addEventListener('input', ()=>{
+        status.textContent = 'Editing…';
+        // 轻量自动保存，避免丢失（没有按钮了）
+        clearTimeout(ta._t); ta._t = setTimeout(()=>{ localStorage.setItem(key, ta.value); status.textContent='Saved'; }, 600);
+      });
+    }
+    ['n4','n9','n8','n11','n10'].forEach(setup);
+  })();
+
+  /* -------------------- Chart 4 -------------------- */
+  (function chart4(){
+    const svg = d3.select("#chart4"),
+          W = 920, H = 240,
+          M = {t:20, r:18, b:36, l:46},
+          w = W - M.l - M.r,
+          h = H - M.t - M.b;
+
+    const g = svg.append("g").attr("transform", `translate(${M.l},${M.t})`);
+
+    const years = d3.range(1980, 2024);
+    const x = d3.scaleLinear().domain(d3.extent(years)).range([0, w]);
+    const y = d3.scaleLinear().domain([0, 10]).nice().range([h, 0]).clamp(true);
+    const Y_CAP = 8.9;
+
+    g.append("g").attr("class","grid")
+      .call(d3.axisLeft(y).tickSize(-w).ticks(5))
+      .selectAll(".tick text").remove();
+
+    g.append("g").attr("class","axis").attr("transform",`translate(0,${h})`)
+      .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(10));
+    g.append("g").attr("class","axis").call(d3.axisLeft(y).ticks(5));
+    g.append("text").attr("x",-M.l+4).attr("y",12).text("Frequency").style("font-size","12px");
+    g.append("text").attr("x",w-30).attr("y",h+28).text("Year").style("font-size","12px");
+
+    function buildSeries(peaks) {
+      const arr = years.map(y => ({year:y, value:0}));
+      for (const [a, peak, c, height] of peaks) {
+        for (let yr=a; yr<=c; yr++) {
+          const up = Math.max(0, Math.min(1, (yr-a)/Math.max(1, peak-a)));
+          const down = Math.max(0, Math.min(1, (c-yr)/Math.max(1, c-peak)));
+          const t = Math.min(up, down);
+          const idx = yr - years[0];
+          arr[idx].value = Math.max(arr[idx].value, +(height*t).toFixed(2));
+        }
+      }
+      return arr;
+    }
+
+    const series = [
+      { key:"Set model", color:"#67c79e", data:buildSeries([
+        [1984,1986,1987,1.2],[1993,1995,1996,0.9],[1998,1999,2000,0.8],
+        [2003,2004,2005,1.6],[2005,2006,2007,1.0],[2007,2008,2009,0.9],
+        [2009,2010,2011,0.7],[2013,2014,2015,0.9]
+      ])},
+      { key:"Sequence model", color:"#d19a4c", data:buildSeries([
+        [1988,1989,1990,1.0],[1991,1992,1993,0.9],[1994,1996,1997,1.1],[1999,2000,2001,0.9],
+        [2004,2006,2007,2.0],[2006,2008,2009,1.7],[2009,2010,2011,1.3],[2014,2016,2017,1.2],[2018,2019,2020,1.0]
+      ])},
+      { key:"Vector model", color:"#9a8cff", data:buildSeries([
+        [1986,1988,1989,0.8],[1998,1999,2000,0.8],[2002,2004,2006,3.2],
+        [2006,2007,2008,2.0],[2008,2009,2010,1.6],[2009,2011,2012,1.6],[2012,2014,2016,4.0],[2016,2017,2018,3.4]
+      ])},
+      { key:"End-to-end", color:"#e869a7", data:buildSeries([
+        [1994,1996,1997,1.6],[1996,1998,1999,1.2],[2007,2008,2009,1.0],
+        [2009,2011,2012,2.2],[2011,2013,2014,3.1],[2013,2015,2016,4.0],[2017,2019,2020,9.2],[2019,2020,2021,3.0]
+      ])}
+    ];
+
+    series.forEach(s => s.data.forEach(p => { p.value = Math.min(Y_CAP, p.value); }));
+
+    const area = d3.area()
+      .curve(d3.curveMonotoneX)
+      .x(d => x(d.year))
+      .y0(y(0))
+      .y1(d => y(Math.max(0, Math.min(Y_CAP, d.value))));
+
+    const clipId = "reveal-" + Math.random().toString(36).slice(2);
+    svg.append("defs").append("clipPath").attr("id", clipId)
+       .append("rect").attr("x",M.l).attr("y",M.t).attr("width",0).attr("height",h);
+
+    const serG = g.append("g").attr("clip-path",`url(#${clipId})`);
+
+    const paths = serG.selectAll("path.series-area")
+      .data(series, d=>d.key)
+      .join("path")
+      .attr("class","series-area")
+      .attr("fill", d=>d.color)
+      .attr("stroke", d=>d3.color(d.color).darker(1))
+      .attr("d", d => area(d.data));
+
+    const legend = g.append("g").attr("class","legend").attr("transform","translate(10,8)");
+    const items = legend.selectAll("g.item").data(series).join("g")
+      .attr("class","item")
+      .attr("transform",(d,i)=>`translate(0,${i*18})`)
+      .style("cursor","pointer")
+      .on("click", function(e,d){
+        d.hidden = !d.hidden;
+        d3.select(this).select("rect").attr("fill-opacity", d.hidden? 0.15 : 1);
+        paths.filter(p=>p.key===d.key).attr("display", d.hidden? "none": null);
+      })
+      .on("mouseenter",(e,d)=>paths.classed("dim", p=>p.key!==d.key))
+      .on("mouseleave",()=>paths.classed("dim", false));
+
+    items.append("rect").attr("width",12).attr("height",12).attr("rx",2).attr("ry",2).attr("fill",d=>d.color);
+    items.append("text").attr("x",16).attr("y",10).text(d=>d.key);
+
+    const tip = d3.select("#tip4");
+    const guide = g.append("line").attr("class","guide").attr("y1",0).attr("y2",h).style("opacity",0);
+
+    g.append("rect").attr("x",0).attr("y",0).attr("width",w).attr("height",h).attr("fill","transparent")
+      .on("mousemove", function(event){
+        const [mx] = d3.pointer(event, this);
+        const yr = Math.round(x.invert(mx));
+        guide.attr("x1",x(yr)).attr("x2",x(yr)).style("opacity",1);
+
+        const rows = series.filter(s=>!s.hidden).map(s=>{
+          const idx = Math.min(Math.max(yr - years[0],0), years.length-1);
+          return {key:s.key, color:s.color, v:s.data[idx].value};
+        });
+
+        const html = `<div style="margin-bottom:4px">${yr}</div>` +
+          rows.map(r=>`<div><span class="swatch" style="background:${r.color}"></span>${r.key}: ${r.v.toFixed(1)}</div>`).join("");
+        tip.html(html).style("left",(event.clientX)+"px").style("top",(event.clientY)+"px").style("opacity",1);
+      })
+      .on("mouseleave", ()=>{ guide.style("opacity",0); tip.style("opacity",0); });
+
+    svg.select(`#${clipId} rect`).transition().duration(1200).attr("width", w);
+  })();
+
+  /* -------------------- Chart 9 -------------------- */
+  (function chart9(){
+    const SVG_URL = '11.svg';
+    init();
+    async function init(){
+      const stage = document.getElementById('stage9');
+      stage.textContent = 'Loading…';
+      try{
+        const txt = await fetch(SVG_URL).then(r=>{ if(!r.ok) throw new Error('fetch failed'); return r.text(); });
+        stage.innerHTML = txt;
+        const svg = stage.querySelector('svg');
+        if(!svg) throw new Error('no svg found');
+        setup(svg);
+      }catch(e){
+        stage.innerHTML = `<object id="sketchObj9" type="image/svg+xml" data="${SVG_URL}" style="width:100%;height:auto;display:block;background:#fff"></object>`;
+        const obj = document.getElementById('sketchObj9');
+        obj.addEventListener('load', ()=>{ const svg = obj.contentDocument && obj.contentDocument.querySelector('svg'); if(svg) setup(svg); });
+      }
+    }
+    function setup(svg){
+      svg.querySelectorAll('path,line,polyline,polygon,rect,circle,ellipse').forEach(el=>{
+        if(!el.getAttribute('stroke')) el.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--ink').trim());
+        el.setAttribute('stroke-linecap','round'); el.setAttribute('stroke-linejoin','round');
+      });
+      const head = pickGroup(svg, [/^#?head$/i, /\bHead\b/, /头/]);
+      const face = pickGroup(svg, [/^#?face$/i, /\bFace\b/, /表情|脸|面/, /eyes?/i, /mouth/i]);
+      let hand   = pickGroup(svg, [/^#?hand/i, /rightHand/i, /handR/i, /手/]);
+
+      applySway(head, '3deg', '3.2s', 'center');
+      applySway(face, '2.5deg', '2.6s', 'center');
+
+      if(hand){ enableHandWave(hand); }
+      else{
+        svg.addEventListener('click', function oneTimePick(ev){
+          const g = ev.target.closest('g');
+          if(g){ hand = g; enableHandWave(hand); triggerWave(hand); }
+        }, {once:true});
+      }
+
+      document.getElementById('replay9').onclick = ()=>{ const stage = document.getElementById('stage9'); stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter'); };
+      let paused = false;
+      document.getElementById('toggle9').onclick = ()=>{
+        paused = !paused;
+        [head,face].forEach(n=>{ if(n) n.style.animationPlayState = paused?'paused':'running'; });
+        document.getElementById('toggle9').textContent = paused ? 'Play head & face' : 'Pause head & face';
+      };
+      document.getElementById('wave9').onclick = ()=> hand && triggerWave(hand);
+    }
+    function pickGroup(svg, patterns){
+      const groups = Array.from(svg.querySelectorAll('g'));
+      for(const g of groups){
+        const id = (g.id || '').toString();
+        const cls= (g.getAttribute('class') || '').toString();
+        const txt= (g.outerHTML || '').toString();
+        if(patterns.some(re => re.test(id) || re.test(cls) || re.test(txt))) return g;
+      }
+      return null;
+    }
+    function applySway(node, amp, dur, origin){
+      if(!node) return;
+      node.classList.add('sway');
+      node.style.setProperty('--amp', amp);
+      node.style.setProperty('--dur', dur);
+      node.style.transformOrigin = origin;
+      node.style.transformBox = 'fill-box';
+    }
+    function enableHandWave(hand){ hand.style.cursor='pointer'; hand.addEventListener('click', ()=> triggerWave(hand)); }
+    function triggerWave(hand){
+      hand.classList.remove('hand-wave'); void hand.offsetWidth;
+      hand.style.transformOrigin = 'top center'; hand.style.transformBox = 'fill-box';
+      hand.classList.add('hand-wave');
+    }
+  })();
+
+  /* -------------------- Chart 8 -------------------- */
+  (function chart8(){
+    const svg = d3.select('#chart8');
+    const W = 920, H = 420;
+    const M = {t:56, r:24, b:64, l:64};
+    const w = W - M.l - M.r;
+    const h = H - M.t - M.b;
+
+    const g = svg.append('g').attr('transform', `translate(${M.l},${M.t})`);
+
+    const cats = ['BERT','RoBERTa','BART'];
+    const ours = [74.4, 81.9, 73.1];
+    const base = [64.8, 65.5, 63.5];
+    const data = cats.map((c,i)=>({cat:c, ours:ours[i], base:base[i]}));
+
+    const x = d3.scaleBand().domain(cats).range([0,w]).padding(0.28);
+    const y = d3.scaleLinear().domain([0,100]).nice().range([h,0]);
+
+    g.append('g').attr('class','grid')
+      .call(d3.axisLeft(y).tickSize(-w).ticks(5))
+      .selectAll('.tick text').remove();
+
+    g.append('g').attr('class','axis x').attr('transform',`translate(0,${h})`).call(d3.axisBottom(x));
+    g.append('g').attr('class','axis y').call(d3.axisLeft(y).ticks(5));
+
+    g.append('rect').attr('class','frame').attr('x',0).attr('y',0).attr('width',w).attr('height',h);
+
+    g.append('text').attr('class','title').attr('x', w/2).attr('y', -18).attr('text-anchor','middle')
+      .text('Cross Validation Accuracy (%)');
+
+    const groups = g.selectAll('.g').data(data).enter().append('g')
+      .attr('class','g').attr('transform', d => `translate(${x(d.cat)},0)`)
+      .on('mouseenter', function(e,d){
+        d3.select(this).selectAll('.bar,.ghost').attr('opacity',1);
+        tip.style('opacity',1).html(
+          `<div style="margin-bottom:4px"><b>${d.cat}</b></div>
+           <div>Ours: ${d.ours}%</div><div>Baseline: ${d.base}%</div>`);
+      })
+      .on('mousemove', e => tip.style('left', (e.clientX)+'px').style('top', (e.clientY)+'px'))
+      .on('mouseleave', ()=> tip.style('opacity',0));
+
+    const barW   = x.bandwidth()*0.36;
+    const ghostW = x.bandwidth()*0.30;
+    const tip = d3.select('#tip8');
+
+    groups.append('rect').attr('class','bar').attr('x', x.bandwidth()*0.12).attr('width', barW)
+      .attr('y', y(0)).attr('height', 0)
+      .transition().duration(900).ease(d3.easeCubicOut)
+      .attr('y', d => y(d.ours)).attr('height', d => y(0) - y(d.ours));
+
+    const ghosts = groups.append('rect').attr('class','ghost').attr('x', x.bandwidth()*0.56)
+      .attr('width', ghostW).attr('y', y(0)).attr('height', 0).attr('rx',4).attr('ry',4);
+
+    ghosts.transition().delay(150).duration(900).ease(d3.easeCubicOut)
+      .attr('y', d => y(d.base)).attr('height', d => y(0) - y(d.base));
+
+    groups.append('text').attr('class','value')
+      .attr('x', x.bandwidth()*0.12 + barW/2).attr('y', d=> y(d.ours) - 8).attr('text-anchor','middle')
+      .style('opacity',0).text(d=>d.ours.toFixed(1)).transition().delay(700).duration(400).style('opacity',1);
+
+    groups.append('text').attr('class','value')
+      .attr('x', x.bandwidth()*0.56 + ghostW/2).attr('y', d=> y(d.base) - 8).attr('text-anchor','middle')
+      .style('opacity',0.85).style('fill','#3b3b3b').text(d=>d.base.toFixed(1))
+      .transition().delay(750).duration(400).style('opacity',1);
+
+    document.getElementById('toggleGhost8').addEventListener('change', e => {
+      const on = e.target.checked;
+      g.selectAll('.ghost').transition().duration(250).style('opacity', on ? 1 : 0);
+    });
+  })();
+
+  /* -------------------- Chart 11 — with extra triangular shading -------------------- */
+  (function chart11(){
+    const svg = d3.select('#chart11'),
+          W = 900, H = 520,
+          M = {t:40, r:24, b:48, l:70},
+          w = W - M.l - M.r,
+          h = H - M.t - M.b;
+
+    const g = svg.append('g').attr('transform',`translate(${M.l},${M.t})`);
+
+    const x = d3.scaleLinear().domain([-2, 5]).range([0, w]);
+    const y = d3.scaleLinear().domain([0, 0.30]).nice().range([h, 0]);
+    const xTicks = [-2,-1,0,1,2,3,4,5];
+
+    g.append('g').attr('class','grid').call(d3.axisLeft(y).tickSize(-w).ticks(6)).selectAll('text').remove();
+
+    g.append('g').attr('class','grid').attr('transform',`translate(0,${h})`)
+      .call(d3.axisBottom(x).tickValues(xTicks).tickSize(-h).tickFormat(()=>''))  
+      .selectAll('.tick line').attr('stroke','#e5e7eb');
+
+    g.append('g').attr('class','axis').attr('transform',`translate(0,${h})`)
+      .call(d3.axisBottom(x).tickValues(xTicks).tickFormat(d3.format('d')));
+
+    g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(6));
+
+    g.append('text').attr('x',-50).attr('y',-12).attr('text-anchor','start').style('font-size','16px').text('Probability Density');
+    g.append('text').attr('x',w-6).attr('y',h+36).attr('text-anchor','end').style('font-size','16px').text('x');
+
+    const mu0 = 0.15,  s0 = 0.75;
+    const mu1 = 2.00,  s1 = 0.65;
+    const TARGET0 = 0.22, TARGET1 = 0.25;
+
+    const peak0 = 1/(s0*Math.sqrt(2*Math.PI));
+    const peak1 = 1/(s1*Math.sqrt(2*Math.PI));
+    const k0 = TARGET0/peak0, k1 = TARGET1/peak1;
+
+    const N = 800;
+    const xs = d3.range(N).map(i => x.invert(i*(w/(N-1))));
+    const pdf = (xv,mu,s)=> (1/(s*Math.sqrt(2*Math.PI))) * Math.exp(-0.5*((xv-mu)/s)**2);
+
+    const y0 = xs.map(v => k0*pdf(v,mu0,s0));
+    const y1 = xs.map(v => k1*pdf(v,mu1,s1));
+
+    const line = d3.line().x(d=>x(d[0])).y(d=>y(d[1])).curve(d3.curveMonotoneX);
+    const path0 = g.append('path').attr('class','curve y0').attr('fill','none')
+      .attr('d', line(xs.map((v,i)=>[v, y0[i]]))).attr('stroke','#eab308');
+    const path1 = g.append('path').attr('class','curve y1').attr('fill','none')
+      .attr('d', line(xs.map((v,i)=>[v, y1[i]]))).attr('stroke','#0ea5a4');
+
+    [path0, path1].forEach(p=>{
+      const L = p.node().getTotalLength();
+      p.attr('stroke-dasharray',`${L} ${L}`).attr('stroke-dashoffset',L)
+       .transition().duration(900).ease(d3.easeCubicOut).attr('stroke-dashoffset',0);
+    });
+
+    const legend = g.append('g').attr('class','legend').attr('transform',`translate(${w-290},16)`);
+    [{c:'#eab308', text:'p(x, y = 0) × v(x)'},{c:'#0ea5a4', text:'p(x, y = 1) × v(x)'}]
+      .forEach((it,i)=>{ const L = legend.append('g').attr('transform',`translate(0,${i*22})`);
+        L.append('line').attr('x1',0).attr('x2',28).attr('y1',0).attr('y2',0).attr('stroke',it.c).attr('stroke-width',3);
+        L.append('text').attr('x',36).attr('y',5).text(it.text).style('font-style','italic'); });
+
+    /* ----- thresholds & shading (with triangular bands) ----- */
+    let cutL = 0.95, cutR = 1.31;
+    const xm = 1.00;
+
+    const shade = g.append('path').attr('class','shade'); // base area
+    const bandL = g.append('path').attr('class','shade'); // [cutL,1]
+    const bandR = g.append('path').attr('class','shade'); // [1,cutR]
+
+    const vlines = g.append('g');
+    const L = vlines.append('line').attr('class','vline').attr('y1',0).attr('y2',h);
+    const R = vlines.append('line').attr('class','vline').attr('y1',0).attr('y2',h);
+
+    const hL = vlines.append('circle').attr('class','handle').attr('r',4);
+    const hR = vlines.append('circle').attr('class','handle').attr('r',4);
+
+    function updateShade(){
+      const ptsMin = [];
+      xs.forEach((vx,i)=>{
+        const m = (vx>=cutL && vx<=cutR) ? Math.min(y0[i], y1[i]) : 0;
+        ptsMin.push([vx, m]);
+      });
+      const areaBase = d3.area().x(d=>x(d[0])).y0(y(0)).y1(d=>y(d[1])).curve(d3.curveMonotoneX);
+      shade.attr('d', areaBase(ptsMin));
+
+      const between = d3.area().x(d=>x(d.x)).y0(d=>y(d.low)).y1(d=>y(d.high)).curve(d3.curveMonotoneX);
+      const ptsL = [], ptsR = [];
+      xs.forEach((vx,i)=>{
+        const low  = Math.min(y0[i], y1[i]);
+        const high = Math.max(y0[i], y1[i]);
+        if (vx>=cutL && vx<=xm) ptsL.push({x:vx, low, high});
+        if (vx>=xm  && vx<=cutR) ptsR.push({x:vx, low, high});
+      });
+      bandL.attr('d', ptsL.length ? between(ptsL) : null);
+      bandR.attr('d', ptsR.length ? between(ptsR) : null);
+
+      L.attr('x1',x(cutL)).attr('x2',x(cutL));
+      R.attr('x1',x(cutR)).attr('x2',x(cutR));
+      hL.attr('cx',x(cutL)).attr('cy',h);
+      hR.attr('cx',x(cutR)).attr('cy',h);
+    }
+    updateShade();
+
+    hL.style('cursor','ew-resize').call(d3.drag().on('drag', ev=>{
+      cutL = x.invert(Math.max(0, Math.min(x(cutR)-8, ev.x))); updateShade();
+    }));
+    hR.style('cursor','ew-resize').call(d3.drag().on('drag', ev=>{
+      cutR = x.invert(Math.min(w, Math.max(x(cutL)+8, ev.x))); updateShade();
+    }));
+
+    const guide = g.append('line').attr('class','guide').attr('y1',0).attr('y2',h).style('opacity',0);
+    const tip = d3.select('#tip11');
+
+    g.append('rect').attr('x',0).attr('y',0).attr('width',w).attr('height',h).attr('fill','transparent')
+      .on('mousemove', function(ev){
+        const [mx] = d3.pointer(ev,this);
+        const xv = x.invert(mx);
+        const yv0 = k0*pdf(xv,mu0,s0), yv1 = k1*pdf(xv,mu1,s1);
+        guide.attr('x1',mx).attr('x2',mx).style('opacity',1);
+        tip.html(`<div><b>x</b> = ${xv.toFixed(2)}</div>
+                  <div style="color:#eab308">p(x,y=0) = ${yv0.toFixed(3)}</div>
+                  <div style="color:#0ea5a4">p(x,y=1) = ${yv1.toFixed(3)}</div>`)
+           .style('left',(ev.clientX)+'px').style('top',(ev.clientY)+'px').style('opacity',1);
+      })
+      .on('mouseleave', ()=>{ guide.style('opacity',0); tip.style('opacity',0); });
+
+    function shadedIntegral(){
+      let S = 0; const dx = (x.invert(1)-x.invert(0));
+      xs.forEach((vx,i)=>{ if(vx>=cutL && vx<=cutR) S += Math.min(y0[i],y1[i]) * dx; });
+      return S;
+    }
+    const badge = g.append('text').attr('x',8).attr('y',16).style('font-size','12px').style('fill','#64748b');
+    d3.timer(()=>{ badge.text(`Overlap ∫ min(pdf0, pdf1) dx ≈ ${shadedIntegral().toFixed(3)}  (peaks: 0.22 / 0.25)`); }, 300);
+  })();
+
+  /* -------------------- Chart 10 -------------------- */
+  (function chart10(){
+    const svg = d3.select("#chart10"),
+          W = 820, H = 640,
+          M = {t:24, r:24, b:28, l:24},
+          w = W - M.l - M.r,
+          h = H - M.t - M.b;
+
+    const g = svg.append("g").attr("transform", `translate(${M.l},${M.t})`);
+
+    const GEO_URL = "MasterPlan2019PlanningAreaBoundaryNoSea.geojson";
+    const eastNames = ["Bedok","Tampines","Pasir Ris","Changi","Changi Bay","Changi Airport","Marine Parade","Geylang","Kallang","Serangoon","Hougang","Sengkang","Punggol"];
+    function getName(props){ return props?.PLN_AREA_N ?? props?.Name ?? props?.name ?? props?.PLN_AREA ?? ""; }
+
+    (async function init(){
+      const raw = await fetch(GEO_URL).then(r => r.json());
+      const allFeatures = raw.type === "FeatureCollection" ? raw.features : [];
+      const eastFeatures = allFeatures.filter(f => {
+        const nm = (getName(f.properties) + "").toLowerCase().trim();
+        return eastNames.some(x => nm === x.toLowerCase());
+      });
+      const fc = { type:"FeatureCollection", features: eastFeatures.length ? eastFeatures : allFeatures };
+
+      const projection = d3.geoMercator();
+      const path = d3.geoPath(projection);
+      projection.fitExtent([[0,0],[w,h]], fc);
+
+      const cellsX = 12, cellsY = 12;
+      g.append("g").attr("class","grid").selectAll("line.v")
+        .data(d3.range(cellsX+1)).join("line")
+        .attr("x1", d => d*(w/cellsX)).attr("x2", d => d*(w/cellsX))
+        .attr("y1", 0).attr("y2", h).attr("opacity",0)
+        .transition().duration(600).delay(d=>d*12).attr("opacity",1);
+
+      g.append("g").attr("class","grid").selectAll("line.h")
+        .data(d3.range(cellsY+1)).join("line")
+        .attr("y1", d => d*(h/cellsY)).attr("y2", d => d*(h/cellsY))
+        .attr("x1", 0).attr("x2", w).attr("opacity",0)
+        .transition().duration(600).delay(d=>d*12).attr("opacity",1);
+
+      g.selectAll("path.land").data(fc.features).join("path")
+        .attr("class","land").attr("d", path).attr("opacity",0)
+        .transition().duration(700).delay(200).attr("opacity",1);
+
+      let centerLonLat;
+      try { centerLonLat = d3.geoCentroid(fc); } catch(e) {}
+      if(!centerLonLat || !isFinite(centerLonLat[0])) { centerLonLat = projection.invert([w/2, h/2]); }
+      let ringCenter = projection(centerLonLat);
+      let ringR = Math.min(w,h)/4;
+
+      const ringGroup = g.append("g");
+
+      ringGroup.append("circle").attr("class","ring")
+        .attr("cx", ringCenter[0]).attr("cy", ringCenter[1]).attr("r", ringR)
+        .attr("opacity",0).transition().duration(700).delay(400).attr("opacity",1);
+
+      ringGroup.append("circle").attr("class","pt").attr("r",5)
+        .attr("cx", ringCenter[0]-40).attr("cy", ringCenter[1]-20)
+        .attr("opacity",0).transition().duration(700).delay(450).attr("opacity",1);
+
+      const xPrimeHalo = ringGroup.append("text").attr("class","label label-halo")
+        .attr("text-anchor","middle").attr("dominant-baseline","middle").attr("opacity",0).text("x′");
+      const xPrime = ringGroup.append("text").attr("class","label")
+        .attr("text-anchor","middle").attr("dominant-baseline","middle").attr("opacity",0).text("x′");
+
+      const labelB = ringGroup.append("text").attr("class","label")
+        .attr("x", ringCenter[0]-ringR-14).attr("y", ringCenter[1]+ringR-8)
+        .text("B(x′)").attr("opacity",0).transition().duration(700).delay(500).attr("opacity",1);
+
+      positionXPrimeCenter(ringCenter[0], ringCenter[1]);
+      xPrimeHalo.transition().duration(700).delay(450).attr("opacity",1);
+      xPrime.transition().duration(700).delay(450).attr("opacity",1);
+
+      const hit = ringGroup.append("circle").attr("cx", ringCenter[0]).attr("cy", ringCenter[1])
+        .attr("r", ringR).attr("fill","transparent").style("cursor","grab");
+
+      hit.call(d3.drag()
+        .on("start", () => hit.style("cursor","grabbing"))
+        .on("drag", ev => { ringCenter = [ev.x, ev.y]; updateRing(); })
+        .on("end", () => hit.style("cursor","grab")));
+
+      svg.on("wheel", (ev) => {
+        ev.preventDefault();
+        const delta = ev.deltaY < 0 ? -14 : 14;
+        ringR = Math.max(24, Math.min(Math.min(w,h)/2.2, ringR + delta));
+        updateRing();
+      }, {passive:false});
+
+      function updateRing(){
+        ringGroup.select("circle.ring").attr("cx", ringCenter[0]).attr("cy", ringCenter[1]).attr("r", ringR);
+        hit.attr("cx", ringCenter[0]).attr("cy", ringCenter[1]).attr("r", ringR);
+        const px = ringCenter[0] - ringR*0.25, py = ringCenter[1] - ringR*0.18;
+        ringGroup.select("circle.pt").attr("cx", px).attr("cy", py);
+        positionXPrimeCenter(ringCenter[0], ringCenter[1]);
+        labelB.attr("x", ringCenter[0]-ringR-14).attr("y", ringCenter[1]+ringR-8);
+      }
+      function positionXPrimeCenter(cx, cy){ xPrime.attr("x", cx).attr("y", cy); xPrimeHalo.attr("x", cx).attr("y", cy); }
+    })();
+  })();
+  </script>
+</body>
+</html>
