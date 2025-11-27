@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IDV Assignment 4 + 5 – Dopamine Page</title>
+<title>IDV Assignment 5 – Dopamine Page</title>
 
 <style>
 /* Global */
@@ -34,9 +34,6 @@ header {
 
 header h1{
   font-size: 40px; margin: 0; font-weight: 900;
-}
-header p{
-  opacity: .9; margin-top: 12px; font-size: 18px;
 }
 
 .wrap{
@@ -92,7 +89,6 @@ header p{
 
 <header>
   <h1>IDV Assignment 5</h1>
-  <p>All Assignments · Integrated in One Dopamine UI Page</p>
 </header>
 
 <div class="wrap">
@@ -100,7 +96,15 @@ header p{
   <!-- Overview -->
   <div class="section-card">
     <div class="section-title tag1">Overview</div>
-    <p>This single webpage integrates Assignment 1–4 using dopamine-inspired UI.</p>
+    <p>
+      When creating the A5 integrated webpage, I first asked GPT to generate a main page based on a “dopamine design” style and made sure the overall visual layout was suitable for placing all four assignments together. Then, I tried to directly merge the full HTML files of A1–A4 into a single page, but because the code was too large and structurally complex (especially A3 and A4, which contain heavy D3 visualizations), GPT couldn’t process all of them at once.
+    </p>
+    <p>
+      It initially suggested a version with page-to-page navigation, but I wanted A5 to display all content on one continuous page, so I continued looking for alternatives. Directly combining the HTML files would cause CSS, JS, and D3 scope conflicts, so GPT recommended embedding the four assignments separately using &lt;iframe&gt;. This kept all original functionality intact and prevented interference between the files.
+    </p>
+    <p>
+      Finally, I uploaded index.html along with the four assignment files to GitHub and deployed the site using GitHub Pages. This allowed each iframe to correctly load its corresponding HTML file, and I successfully completed the A5 integrated webpage.
+    </p>
   </div>
 
   <!-- A1 -->
